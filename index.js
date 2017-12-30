@@ -21,8 +21,12 @@ var RainAboveTwenty = 'Expect rain and hot temperatures. I recommend dressing li
 var SnowUnderTen = 'Oh Oh Oh! Winter is here, and with it comes the snow. You should be dressing warm.';
 var SnowTenToTwenty = 'We might be having snow, but it is not going to be that cold. I still recommend dressing warm.';
 
+function separateStringBySpace(string) {
+  return string.replace("-", " ");
+}
+
 function getDressingAdvice(forecast, today) {
-  var speechOutput = "";
+  var advice = "";
   var forecastData;
   if (today) {
     forecastData = forecast["daily"]["data"][0];
@@ -37,59 +41,60 @@ function getDressingAdvice(forecast, today) {
   if ((icon === "clear-day" && averageTemperature < 10)
    || (icon === "clear-night" && averageTemperature < 10)) {
       console.log(1);
-      speechOutput = SunnyUnderTen;
+      advice = SunnyUnderTen;
   } else if ((icon === "clear-day" && 10 <= averageTemperature < 20)
    || (icon === "clear-night" && 10 <= averageTemperature < 20)) {
       console.log(2);
-      speechOutput === SunnyTenToTwenty;
+      advice === SunnyTenToTwenty;
   } else if ((icon === "clear-day" && averageTemperature >= 20)
    || (icon === "clear-night" && averageTemperature >= 20)) {
       console.log(3);
-      speechOutput = SunnyAboveTwenty;
+      advice = SunnyAboveTwenty;
   } else if (icon === "rain" && averageTemperature < 10) {
      console.log(4);
-      speechOutput = RainUnderTen;
+      advice = RainUnderTen;
   } else if (icon === "rain" && 10 <= averageTemperature < 20) {
      console.log(5);
-      speechOutput = RainTenToTwenty;
+      advice = RainTenToTwenty;
   } else if (icon === "rain" && averageTemperature >= 20) {
      console.log(6);
-      speechOutput = RainAboveTwenty;
+      advice = RainAboveTwenty;
   } else if ((icon === "snow" && averageTemperature < 10)
    || (icon === "sleet" && averageTemperature < 10)) {
       console.log(7);
-      speechOutput = SnowUnderTen;
+      advice = SnowUnderTen;
   } else if ((icon === "snow" && 10 <= averageTemperature < 20)
    || (icon === "sleet" && 10 <= averageTemperature < 20)) {
       console.log(8);
-      speechOutput = SnowTenToTwenty;
+      advice = SnowTenToTwenty;
   } else if ((icon === "wind" && averageTemperature < 10)
    || (icon === "fog" && averageTemperature < 10)
    || (icon === "cloudy" && averageTemperature < 10)
    || (icon === "partly-cloudy-day" && averageTemperature < 10)
    || (icon === "partly-cloudy-night" && averageTemperature < 10)) {
       console.log(9);
-      speechOutput = CloudyUnderTen;
+      advice = CloudyUnderTen;
   } else if ((icon === "wind" && 10 <= averageTemperature < 20)
    || (icon === "fog" && 10 <= averageTemperature < 20)
    || (icon === "cloudy" && 10 <= averageTemperature < 20)
    || (icon === "partly-cloudy-day" && 10 <= averageTemperature < 20)
    || (icon === "partly-cloudy-night" && 10 <= averageTemperature < 20)) {
       console.log(10);
-      speechOutput = CloudyTenToTwenty;
+      advice = CloudyTenToTwenty;
   } else if ((icon === "wind" && averageTemperature >= 20)
    || (icon === "fog" && averageTemperature >= 20)
    || (icon === "cloudy" && averageTemperature >= 20)
    || (icon === "partly-cloudy-day" && averageTemperature >= 20)
    || (icon === "partly-cloudy-night" && averageTemperature >= 20)) {
       console.log(11);
-      speechOutput = CloudyAboveTwenty;
+      advice = CloudyAboveTwenty;
   } else {
      console.log(12);
-      speechOutput = icon + "is expected, with an average temperature of " + averageTemperature + " Celsius degrees";
+      advice = separateStringBySpace(icon) + "is expected, with an average temperature of " + averageTemperature + " Celsius degrees";
   }
-  return speechOutput;
+  return advice;
 }
+
 
 var http = require('https');
 
@@ -98,12 +103,10 @@ function getJSON(url, callback) {
     var body = "";
     response.on('data', function(chunk) {
       body += chunk; //appens every chunck of data to body as soon as it is received
-      //console.log(body);
     });
     response.on('end', function() {
-      var forecast = JSON.parse(body); //Parse the JSON when the full response is received
+      var forecast = JSON.parse(body); //full response is received
       callback(null, forecast);
-      //console.log(body);
     });
     response.on('error', callback); // handling errors
   }).on('error', callback).end();
@@ -138,17 +141,19 @@ var handlers = {
         this.emit(':responseReady');
     },
     'DressingTodayIntent': function() {
-        var speechOutput;
-        getJSON('https://api.darksky.net/forecast/9e0495a835ed823a705a9a567eee982a/48.861317,2.348764?units=si&exclude=currently,minutely,hourly,alerts,flags',
-        function(err, forecast) {
-            if (err) {
-              console.log('Error occurred while trying to retrieve weather data', err);
-            } else {
-              console.log(forecast);
-              speechOutput = getDressingAdvice(forecast, true);
-              console.log(speechOutput);
-            }
-        });
+        var dressingAdvice;
+        var speechOutput = getJSON('https://api.darksky.net/forecast/9e0495a835ed823a705a9a567eee982a/48.861317,2.348764?units=si&exclude=currently,minutely,hourly,alerts,flags',
+            function(err, forecast) {
+                if (err) {
+                  console.log('Error occurred while trying to retrieve weather data', err);
+                } else {
+                  dressingAdvice = getDressingAdvice(forecast, true);
+                  console.log("one " + dressingAdvice);
+                }
+                console.log("two " + dressingAdvice);
+                return dressingAdvice;
+            });
+        console.log("three " + speechOutput);
         this.response.cardRenderer("Your dressing advice for today:", speechOutput);
         this.response.speak(speechOutput);
         this.emit(':responseReady');
@@ -165,6 +170,7 @@ var handlers = {
             console.log(speechOutput);
           }
         });
+        console.log(speechOutput);
         this.response.cardRenderer("Your dressing advice for tomorrow:", speechOutput);
         this.response.speak(speechOutput);
         this.emit(':responseReady');
