@@ -1,4 +1,8 @@
 var Alexa = require('alexa-sdk');
+var express = require('express');
+var request = require('request');
+
+var app = express();
 
 var ForecastIo_API_Key = "9e0495a835ed823a705a9a567eee982a";
 
@@ -7,6 +11,9 @@ var SKILL_NAME = 'Weather Companion';
 var HELP_MESSAGE = 'You can ask a dressing advice for today or tomorrow. Which will it be?';
 var HELP_REPROMPT = 'What can I help you with?';
 var STOP_MESSAGE = 'Goodbye!';
+
+//Google Analytics
+var GA_TRACKING_ID = 'UA-112014818-1';
 
 //Dressing advice
 var SunnyUnderTen = 'It will be sunny and cold outside; Dress warm and carry your sunglasses.';
@@ -20,6 +27,35 @@ var RainTenToTwenty = 'Classic Paris; It is going to rain so remember to carry y
 var RainAboveTwenty = 'Expect rain and hot temperatures. I recommend dressing light but bringing an umbrella';
 var SnowUnderTen = 'Oh Oh Oh! Winter is here, and with it comes the snow. You should be dressing warm.';
 var SnowTenToTwenty = 'We might be having snow, but it is not going to be that cold. I still recommend dressing warm.';
+
+function trackEvent(category, action, label, value, cb) {
+  console.log(1);
+  var data = {
+    v: '1', // API Version.
+    tid: GA_TRACKING_ID,
+    cid: '555',
+    t: 'event',
+    ec: category,
+    ea: action,
+    el: label,
+    ev: value,
+  };
+  request.post(
+    'http://www.google-analytics.com/collect', {
+      form: data
+    },
+    function(err, response) {
+      console.log(2);
+      if (err) { console.log(3); return cb(err); }
+      if (response.statusCode !== 200) {
+        console.log(4);
+        return cb(new Error('Tracking failed'));
+      }
+      console.log(5);
+      cb();
+    }
+  );
+}
 
 function separateStringBySpace(string) {
   return string.replace("-", " ");
@@ -122,57 +158,77 @@ exports.handler = function(event, context, callback){
 
 
 var handlers = {
-    'LaunchRequest': function () {
-      this.emit('AMAZON.HelpIntent');
+    'LaunchRequest': function (intent, session, response) {
+      var self = this;
+      trackEvent('Intent', 'LaunchRequest', 'Launch', '100', function(err) {
+        if (err) { return next(err); }
+        self.emit('AMAZON.HelpIntent');
+      });
     },
-    'AMAZON.CancelIntent': function () {
-      this.response.speak(STOP_MESSAGE);
-      this.emit(':responseReady');
+    'AMAZON.CancelIntent': function (intent, session, response) {
+      var self = this;
+      trackEvent('Intent', 'AMAZON.CancelIntent', 'Cancel', '100', function(err) {
+        if (err) { return next(err); }
+        console.log(STOP_MESSAGE);
+        self.response.speak(STOP_MESSAGE);
+        self.emit(':responseReady');
+      });
     },
-    'AMAZON.HelpIntent': function () {
-        var speechOutput = HELP_MESSAGE;
-        var reprompt = HELP_REPROMPT;
+    'AMAZON.HelpIntent': function (intent, session, response) {
+      var speechOutput = HELP_MESSAGE;
+      var reprompt = HELP_REPROMPT;
+      var self = this;
 
-        this.response.speak(speechOutput).listen(reprompt);
-        this.emit(':responseReady');
+      trackEvent('Intent', 'AMAZON.HelpIntent', 'Help', '100', function(err) {
+        if (err) { return next(err); }
+        console.log(HELP_MESSAGE);
+        self.response.speak(speechOutput).listen(reprompt);
+        self.emit(':responseReady');
+      });
     },
-    'AMAZON.StopIntent': function () {
-        this.response.speak(STOP_MESSAGE);
-        this.emit(':responseReady');
+    'AMAZON.StopIntent': function (intent, session, response) {
+      var self = this;
+      trackEvent('Intent', 'AMAZON.StopIntent', 'Stop', '100', function(err) {
+        if (err) { return next(err); }
+        console.log(STOP_MESSAGE);
+        self.response.speak(STOP_MESSAGE);
+        self.emit(':responseReady');
+      });
     },
-    'DressingTodayIntent': function() {
-        var dressingAdvice;
-        var speechOutput = getJSON('https://api.darksky.net/forecast/9e0495a835ed823a705a9a567eee982a/48.861317,2.348764?units=si&exclude=currently,minutely,hourly,alerts,flags',
-            function(err, forecast) {
-                if (err) {
-                  console.log('Error occurred while trying to retrieve weather data', err);
-                } else {
-                  dressingAdvice = getDressingAdvice(forecast, true);
-                  console.log("one " + dressingAdvice);
-                }
-                console.log("two " + dressingAdvice);
-                return dressingAdvice;
-            });
-        console.log("three " + speechOutput);
-        this.response.cardRenderer("Your dressing advice for today:", speechOutput);
-        this.response.speak(speechOutput);
-        this.emit(':responseReady');
-    },
-    'DressingTomorrowIntent': function() {
-        var speechOutput;
-        var url = 'https://api.darksky.net/forecast/9e0495a835ed823a705a9a567eee982a/48.861317,2.348764?units=si&exclude=currently,minutely,hourly,alerts,flags';
-        getJSON(url, function(err, forecast) {
+    'DressingTodayIntent': function(intent, session, response) {
+      var speechOutput;
+      var self = this;
+      var callback = getJSON('https://api.darksky.net/forecast/9e0495a835ed823a705a9a567eee982a/48.861317,2.348764?units=si&exclude=currently,minutely,hourly,alerts,flags',
+        function(err, forecast) {
           if (err) {
             console.log('Error occurred while trying to retrieve weather data', err);
           } else {
-            console.log(forecast);
-            speechOutput = getDressingAdvice(forecast, false);
-            console.log(speechOutput);
+            speechOutput = getDressingAdvice(forecast, true);
+            console.log("one: " + speechOutput);
           }
+          console.log("two: " + speechOutput);
+          self.response.cardRenderer("Your dressing advice for today:", speechOutput);
+          self.response.speak(speechOutput);
+          self.emit(':responseReady');
         });
-        console.log(speechOutput);
-        this.response.cardRenderer("Your dressing advice for tomorrow:", speechOutput);
-        this.response.speak(speechOutput);
-        this.emit(':responseReady');
+      trackEvent('Intent', 'DressingTodayIntent', 'DressingToday', '100', callback);
+    },
+    'DressingTomorrowIntent': function(intent, session, response) {
+      var speechOutput;
+      var self = this;
+      var callback = getJSON('https://api.darksky.net/forecast/9e0495a835ed823a705a9a567eee982a/48.861317,2.348764?units=si&exclude=currently,minutely,hourly,alerts,flags',
+        function(err, forecast) {
+          if (err) {
+              console.log('Error occurred while trying to retrieve weather data', err);
+          } else {
+              speechOutput = getDressingAdvice(forecast, false);
+              console.log("one: " + speechOutput);
+          }
+          console.log("two: " + speechOutput);
+          self.response.cardRenderer("Your dressing advice for tomorrow:", speechOutput);
+          self.response.speak(speechOutput);
+          self.emit(':responseReady');
+        });
+      trackEvent('Intent', 'DressingTomorrowIntent', 'DressingTomorrow', '100', callback);
     },
 };
