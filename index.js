@@ -81,7 +81,7 @@ function getDressingAdvice(forecast, today) {
   } else if ((icon === "clear-day" && 10 <= averageTemperature < 20)
    || (icon === "clear-night" && 10 <= averageTemperature < 20)) {
       console.log(2);
-      advice === SunnyTenToTwenty;
+      advice = SunnyTenToTwenty;
   } else if ((icon === "clear-day" && averageTemperature >= 20)
    || (icon === "clear-night" && averageTemperature >= 20)) {
       console.log(3);
@@ -160,40 +160,46 @@ exports.handler = function(event, context, callback){
 var handlers = {
     'LaunchRequest': function (intent, session, response) {
       var self = this;
-      trackEvent('Intent', 'LaunchRequest', 'Launch', '100', function(err) {
+
+      var callback = function(err) {
         if (err) { return next(err); }
         self.emit('AMAZON.HelpIntent');
-      });
+      };
+      trackEvent('Intent', 'LaunchRequest', 'Launch', '100', callback());
     },
     'AMAZON.CancelIntent': function (intent, session, response) {
       var self = this;
-      trackEvent('Intent', 'AMAZON.CancelIntent', 'Cancel', '100', function(err) {
+
+      var callback = function(err) {
         if (err) { return next(err); }
         console.log(STOP_MESSAGE);
         self.response.speak(STOP_MESSAGE);
         self.emit(':responseReady');
-      });
+      };
+      trackEvent('Intent', 'AMAZON.CancelIntent', 'Cancel', '100', callback());
     },
     'AMAZON.HelpIntent': function (intent, session, response) {
       var speechOutput = HELP_MESSAGE;
       var reprompt = HELP_REPROMPT;
       var self = this;
 
-      trackEvent('Intent', 'AMAZON.HelpIntent', 'Help', '100', function(err) {
+      var callback = function(err) {
         if (err) { return next(err); }
-        console.log(HELP_MESSAGE);
         self.response.speak(speechOutput).listen(reprompt);
         self.emit(':responseReady');
-      });
+      };
+      trackEvent('Intent', 'AMAZON.HelpIntent', 'Help', '100', callback());
     },
     'AMAZON.StopIntent': function (intent, session, response) {
       var self = this;
-      trackEvent('Intent', 'AMAZON.StopIntent', 'Stop', '100', function(err) {
+
+      var callback = function(err) {
         if (err) { return next(err); }
         console.log(STOP_MESSAGE);
         self.response.speak(STOP_MESSAGE);
         self.emit(':responseReady');
-      });
+      };
+      trackEvent('Intent', 'AMAZON.StopIntent', 'Stop', '100', callback());
     },
     'DressingTodayIntent': function(intent, session, response) {
       var speechOutput;
